@@ -1156,6 +1156,19 @@ lvim.lang = {
       },
     },
   },
+  nim = {
+    formatters = {},
+    linters = {},
+    lsp = {
+      provider = "nimls",
+      setup = {
+        cmd = {
+          "nimlsp",
+          "/etc/nim",
+        },
+      },
+    },
+  },
   gdscript = {
     formatters = {},
     linters = {},
