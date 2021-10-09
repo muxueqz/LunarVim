@@ -1,7 +1,5 @@
 local home_dir = vim.loop.os_homedir()
 local utils = require "utils"
--- FIXME: stop using hard-coded paths for LspInstall
-local ls_install_prefix = vim.fn.stdpath "data" .. "/lspinstall"
 
 lvim = {
   leader = "space",
@@ -30,70 +28,12 @@ lvim = {
       },
     },
   },
-
-  lsp = {
-    completion = {
-      item_kind = {
-        "   (Text) ",
-        "   (Method)",
-        "   (Function)",
-        "   (Constructor)",
-        "   (Field)",
-        "   (Variable)",
-        "   (Class)",
-        " ﰮ  (Interface)",
-        "   (Module)",
-        "   (Property)",
-        " 塞 (Unit)",
-        "   (Value)",
-        " 練 (Enum)",
-        "   (Keyword)",
-        "   (Snippet)",
-        "   (Color)",
-        "   (File)",
-        "   (Reference)",
-        "   (Folder)",
-        "   (EnumMember)",
-        " ﲀ  (Constant)",
-        "   (Struct)",
-        "   (Event)",
-        "   (Operator)",
-        "   (TypeParameter)",
-      },
-    },
-    diagnostics = {
-      signs = {
-        active = true,
-        values = {
-          { name = "LspDiagnosticsSignError", text = "" },
-          { name = "LspDiagnosticsSignWarning", text = "" },
-          { name = "LspDiagnosticsSignHint", text = "" },
-          { name = "LspDiagnosticsSignInformation", text = "" },
-        },
-      },
-      virtual_text = {
-        prefix = "",
-        spacing = 0,
-      },
-      update_in_insert = false,
-      underline = true,
-      severity_sort = true,
-    },
-    override = {},
-    document_highlight = true,
-    popup_border = "single",
-    on_attach_callback = nil,
-    on_init_callback = nil,
-    null_ls = {
-      setup = {},
-    },
-  },
-
   plugins = {
     -- use config.lua for this not put here
   },
 
   autocommands = {},
+<<<<<<< HEAD
 }
 
 local schemas = nil
@@ -1209,4 +1149,7 @@ lvim.lang = {
       },
     },
   },
+=======
+  lang = {},
+>>>>>>> 5fef931d8720f2ef0d7a0fca18b96f31fd36689a
 }
