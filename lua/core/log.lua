@@ -8,7 +8,6 @@ function Log:add_entry(msg, level)
   if self.__handle then
     -- plenary uses lower-case log levels
     self.__handle[level:lower()](msg)
-    return
   end
   local status_ok, plenary = pcall(require, "plenary")
   if status_ok then

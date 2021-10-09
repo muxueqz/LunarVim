@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 set -eo pipefail
 
 #Set branch to master unless specified by the user
@@ -15,15 +16,6 @@ declare -r LUNARVIM_CONFIG_DIR="${LUNARVIM_CONFIG_DIR:-"$XDG_CONFIG_HOME/lvim"}"
 # TODO: Use a dedicated cache directory #1256
 declare -r LUNARVIM_CACHE_DIR="$XDG_CACHE_HOME/nvim"
 declare -r LUNARVIM_PACK_DIR="$LUNARVIM_RUNTIME_DIR/site/pack"
-
-declare BASEDIR
-BASEDIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-BASEDIR="$(dirname -- "$(dirname -- "$BASEDIR")")"
-readonly BASEDIR
-
-declare ARGS_LOCAL=0
-declare ARGS_OVERWRITE=0
-declare ARGS_INSTALL_DEPENDENCIES=1
 
 declare -a __lvim_dirs=(
   "$LUNARVIM_CONFIG_DIR"
@@ -44,26 +36,19 @@ function usage() {
   echo "Usage: install.sh [<options>]"
   echo ""
   echo "Options:"
-  echo "    -h, --help                       Print this help message"
-  echo "    -l, --local                      Install local copy of LunarVim"
-  echo "    --overwrite                      Overwrite previous LunarVim configuration (a backup is always performed first)"
-  echo "    --[no]-install-dependencies      Whether to prompt to install external dependencies (will prompt by default)"
+  echo "    -h, --help    Print this help message"
+  echo "    -y, --yes     Yes for all choices (Install NodeJS, Python, Rust dependencies)"
+  echo "    --overwrite   Overwrite previous lvim configuration"
 }
 
 function parse_arguments() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      -l | --local)
-        ARGS_LOCAL=1
+      -y | --yes)
+        ARGS_INSTALL_NONINTERACTIVE="y"
         ;;
       --overwrite)
-        ARGS_OVERWRITE=1
-        ;;
-      --install-dependencies)
-        ARGS_INSTALL_DEPENDENCIES=1
-        ;;
-      --no-install-dependencies)
-        ARGS_INSTALL_DEPENDENCIES=0
+        ARGS_OVERWRITE="y"
         ;;
       -h | --help)
         usage
@@ -74,41 +59,70 @@ function parse_arguments() {
   done
 }
 
-function msg() {
-  local text="$1"
-  local div_width="80"
-  printf "%${div_width}s\n" ' ' | tr ' ' -
-  printf "%s\n" "$text"
-}
-
 function main() {
   parse_arguments "$@"
 
-  print_logo
+  cat <<'EOF'
 
-  msg "Detecting platform for managing any additional neovim dependencies"
+      88\                                                   88\
+      88 |                                                  \__|
+      88 |88\   88\ 888888$\   888888\   888888\ 88\    88\ 88\ 888888\8888\
+      88 |88 |  88 |88  __88\  \____88\ 88  __88\\88\  88  |88 |88  _88  _88\
+      88 |88 |  88 |88 |  88 | 888888$ |88 |  \__|\88\88  / 88 |88 / 88 / 88 |
+      88 |88 |  88 |88 |  88 |88  __88 |88 |       \88$  /  88 |88 | 88 | 88 |
+      88 |\888888  |88 |  88 |\888888$ |88 |        \$  /   88 |88 | 88 | 88 |
+      \__| \______/ \__|  \__| \_______|\__|         \_/    \__|\__| \__| \__|
+
+EOF
+
+  __add_separator "80"
+
+  echo "Detecting platform for managing any additional neovim dependencies"
   detect_platform
+
+  if [ -n "$GITHUB_ACTIONS" ]; then
+    LV_BRANCH="${GITHUB_REF##*/}"
+    install_packer
+    setup_lvim
+    exit 0
+  fi
 
   check_system_deps
 
-  if [ "$ARGS_INSTALL_DEPENDENCIES" -eq 1 ]; then
-    msg "Would you like to install LunarVim's NodeJS dependencies?"
+  __add_separator "80"
+
+  if [ -z "$ARGS_INSTALL_NONINTERACTIVE" ]; then
+    echo "Would you like to install lunarvim's NodeJS dependencies?"
     read -p "[y]es or [n]o (default: no) : " -r answer
     [ "$answer" != "${answer#[Yy]}" ] && install_nodejs_deps
 
-    msg "Would you like to install LunarVim's Python dependencies?"
+    echo "Would you like to install lunarvim's Python dependencies?"
     read -p "[y]es or [n]o (default: no) : " -r answer
     [ "$answer" != "${answer#[Yy]}" ] && install_python_deps
 
-    msg "Would you like to install LunarVim's Rust dependencies?"
+    echo "Would you like to install lunarvim's Rust dependencies?"
     read -p "[y]es or [n]o (default: no) : " -r answer
     [ "$answer" != "${answer#[Yy]}" ] && install_rust_deps
+  else
+    install_nodejs_deps
+    install_python_deps
+    install_rust_deps
   fi
 
-  msg "Backing up old LunarVim configuration"
+  __add_separator "80"
+
+  echo "Backing up old LunarVim configuration"
   backup_old_config
 
-  if [ "$ARGS_OVERWRITE" -eq 1 ]; then
+  __add_separator "80"
+
+  if [ -n "$ARGS_OVERWRITE" ]; then
+    echo "!!Warning!! -> Removing all lunarvim related config \
+      because of the --overwrite flag"
+    if [ -z "$ARGS_INSTALL_NONINTERACTIVE" ]; then
+      read -p "Would you like to continue? [y]es or [n]o : " -r answer
+      [ "$answer" == "${answer#[Yy]}" ] && exit 1
+    fi
     for dir in "${__lvim_dirs[@]}"; do
       [ -d "$dir" ] && rm -rf "$dir"
     done
@@ -116,20 +130,17 @@ function main() {
 
   install_packer
 
+  __add_separator "80"
+
   if [ -e "$LUNARVIM_RUNTIME_DIR/lvim/init.lua" ]; then
+    echo "Updating LunarVim"
     update_lvim
   else
-    if [ "$ARGS_LOCAL" -eq 1 ]; then
-      link_local_lvim
-    else
-      clone_lvim
-    fi
+    clone_lvim
     setup_lvim
   fi
 
-  msg "Thank you for installing LunarVim!!"
-  echo "You can start it by running: $INSTALL_PREFIX/bin/lvim"
-  echo "Do not forget to use a font with glyphs (icons) support [https://github.com/ryanoasis/nerd-fonts]"
+  __add_separator "80"
 }
 
 function detect_platform() {
@@ -187,13 +198,13 @@ function __install_nodejs_deps_npm() {
       npm install -g "$dep"
     fi
   done
-  echo "All NodeJS dependencies are successfully installed"
+  echo "All NodeJS dependencies are succesfully installed"
 }
 
 function __install_nodejs_deps_yarn() {
   echo "Installing node modules with yarn.."
   yarn global add "${__npm_deps[@]}"
-  echo "All NodeJS dependencies are successfully installed"
+  echo "All NodeJS dependencies are succesfully installed"
 }
 
 function install_nodejs_deps() {
@@ -220,7 +231,7 @@ function install_python_deps() {
   for dep in "${__pip_deps[@]}"; do
     python3 -m pip install --user "$dep"
   done
-  echo "All Python dependencies are successfully installed"
+  echo "All Python dependencies are succesfully installed"
 }
 
 function __attempt_to_install_with_cargo() {
@@ -241,7 +252,7 @@ function install_rust_deps() {
       __attempt_to_install_with_cargo "${dep##*::}"
     fi
   done
-  echo "All Rust dependencies are successfully installed"
+  echo "All Rust dependencies are succesfully installed"
 }
 
 function backup_old_config() {
@@ -273,37 +284,23 @@ function backup_old_config() {
 
 function install_packer() {
   if [ -e "$LUNARVIM_PACK_DIR/packer/start/packer.nvim" ]; then
-    msg "Packer already installed"
+    echo "Packer already installed"
   else
     if ! git clone --depth 1 "https://github.com/wbthomason/packer.nvim" \
       "$LUNARVIM_PACK_DIR/packer/start/packer.nvim"; then
-      msg "Failed to clone Packer. Installation failed."
+      echo "Failed to clone Packer. Installation failed."
       exit 1
     fi
   fi
 }
 
 function clone_lvim() {
-  msg "Cloning LunarVim configuration"
+  echo "Cloning LunarVim configuration"
   if ! git clone --branch "$LV_BRANCH" \
     --depth 1 "https://github.com/${LV_REMOTE}" "$LUNARVIM_RUNTIME_DIR/lvim"; then
     echo "Failed to clone repository. Installation failed."
     exit 1
   fi
-}
-
-function link_local_lvim() {
-  echo "Linking local LunarVim repo"
-
-  # Detect whether it's a symlink or a folder
-  if [ -d "$LUNARVIM_RUNTIME_DIR/lvim" ]; then
-    echo "Removing old installation files"
-    rm -rf "$LUNARVIM_RUNTIME_DIR/lvim"
-  fi
-
-  mkdir -p "$LUNARVIM_RUNTIME_DIR"
-  echo "   - $BASEDIR -> $LUNARVIM_RUNTIME_DIR/lvim"
-  ln -s -f "$BASEDIR" "$LUNARVIM_RUNTIME_DIR/lvim"
 }
 
 function setup_shim() {
@@ -324,12 +321,12 @@ EOF
 function remove_old_cache_files() {
   local packer_cache="$LUNARVIM_CONFIG_DIR/plugin/packer_compiled.lua"
   if [ -e "$packer_cache" ]; then
-    msg "Removing old packer cache file"
+    echo "Removing old packer cache file"
     rm -f "$packer_cache"
   fi
 
   if [ -e "$LUNARVIM_CACHE_DIR/luacache" ] || [ -e "$LUNARVIM_CACHE_DIR/lvim_cache" ]; then
-    msg "Removing old startup cache file"
+    echo "Removing old startup cache file"
     rm -f "$LUNARVIM_CACHE_DIR/{luacache,lvim_cache}"
   fi
 }
@@ -338,7 +335,7 @@ function setup_lvim() {
 
   remove_old_cache_files
 
-  msg "Installing LunarVim shim"
+  echo "Installing LunarVim shim"
 
   setup_shim
 
@@ -354,25 +351,26 @@ function setup_lvim() {
   echo "Packer setup complete"
 
   cp "$LUNARVIM_RUNTIME_DIR/lvim/utils/installer/config.example.lua" "$LUNARVIM_CONFIG_DIR/config.lua"
+
+  echo "Thank you for installing LunarVim!!"
+  echo "You can start it by running: $INSTALL_PREFIX/bin/lvim"
+  echo "Do not forget to use a font with glyphs (icons) support [https://github.com/ryanoasis/nerd-fonts]"
 }
 
 function update_lvim() {
-  "$INSTALL_PREFIX/bin/lvim" --headless +'LvimUpdate' +q
+  git -C "$LUNARVIM_RUNTIME_DIR/lvim" fetch --quiet
+  if ! git -C "$LUNARVIM_RUNTIME_DIR/lvim" diff --quiet "@{upstream}"; then
+    git -C "$LUNARVIM_RUNTIME_DIR/lvim" merge --ff-only --progress ||
+      echo "Unable to guarantee data integrity while updating. Please do that manually instead." && exit 1
+  fi
+  echo "Clearing up old startup cache"
+  "$INSTALL_PREFIX/bin/lvim" --headless +LvimCacheReset +q
+  echo "Your LunarVim installation is now up to date!"
 }
 
-function print_logo() {
-  cat <<'EOF'
-
-      88\                                                   88\
-      88 |                                                  \__|
-      88 |88\   88\ 888888$\   888888\   888888\ 88\    88\ 88\ 888888\8888\
-      88 |88 |  88 |88  __88\  \____88\ 88  __88\\88\  88  |88 |88  _88  _88\
-      88 |88 |  88 |88 |  88 | 888888$ |88 |  \__|\88\88  / 88 |88 / 88 / 88 |
-      88 |88 |  88 |88 |  88 |88  __88 |88 |       \88$  /  88 |88 | 88 | 88 |
-      88 |\888888  |88 |  88 |\888888$ |88 |        \$  /   88 |88 | 88 | 88 |
-      \__| \______/ \__|  \__| \_______|\__|         \_/    \__|\__| \__| \__|
-
-EOF
+function __add_separator() {
+  local DIV_WIDTH="$1"
+  printf "%${DIV_WIDTH}s\n" ' ' | tr ' ' -
 }
 
 main "$@"

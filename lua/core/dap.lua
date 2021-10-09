@@ -10,18 +10,6 @@ M.config = function()
       linehl = "",
       numhl = "",
     },
-    breakpoint_rejected = {
-      text = "",
-      texthl = "LspDiagnosticsSignHint",
-      linehl = "",
-      numhl = "",
-    },
-    stopped = {
-      text = "",
-      texthl = "LspDiagnosticsSignInformation",
-      linehl = "DiagnosticUnderlineInfo",
-      numhl = "LspDiagnosticsSignInformation",
-    },
   }
 end
 
@@ -29,9 +17,6 @@ M.setup = function()
   local dap = require "dap"
 
   vim.fn.sign_define("DapBreakpoint", lvim.builtin.dap.breakpoint)
-  vim.fn.sign_define("DapBreakpointRejected", lvim.builtin.dap.breakpoint_rejected)
-  vim.fn.sign_define("DapStopped", lvim.builtin.dap.stopped)
-
   dap.defaults.fallback.terminal_win_cmd = "50vsplit new"
 
   lvim.builtin.which_key.mappings["d"] = {

@@ -14,11 +14,6 @@ lvim.autocommands = {
       "nnoremap <silent> <buffer> q :q<CR>",
     },
     {
-      "FileType",
-      "lsp-installer",
-      "nnoremap <silent> <buffer> q :q<CR>",
-    },
-    {
       "TextYankPost",
       "*",
       "lua require('vim.highlight').on_yank({higroup = 'Search', timeout = 200})",

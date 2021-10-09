@@ -15,7 +15,6 @@ local markdown = require "onedarker.markdown"
 local Whichkey = require "onedarker.Whichkey"
 local Git = require "onedarker.Git"
 local LSP = require "onedarker.LSP"
-local diff = require "onedarker.diff"
 
 local skeletons = {
   highlights,
@@ -24,7 +23,6 @@ local skeletons = {
   Whichkey,
   Git,
   LSP,
-  diff,
 }
 
 for _, skeleton in ipairs(skeletons) do

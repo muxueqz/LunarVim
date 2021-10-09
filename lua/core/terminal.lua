@@ -1,4 +1,5 @@
 local M = {}
+local utils = require "utils"
 local Log = require "core.log"
 
 M.config = function()
@@ -89,16 +90,30 @@ M._exec_toggle = function(exec)
   exec_term:toggle()
 end
 
----Toggles a log viewer according to log.viewer.layout_config
----@param logfile string the fullpath to the logfile
-M.toggle_log_view = function(logfile)
-  local log_viewer = lvim.log.viewer.cmd
-  if vim.fn.executable(log_viewer) ~= 1 then
-    log_viewer = "less +F"
+local function get_log_path(name)
+  --handle custom paths not managed by Plenary.log
+  local file
+  if name == "nvim" then
+    file = utils.join_paths(vim.fn.stdpath "cache", "log")
+  elseif name == "packer.nvim" then
+    file = utils.join_paths(vim.fn.stdpath "cache", "packer.nvim.log")
+  else
+    file = Log:get_path()
   end
-  log_viewer = log_viewer .. " " .. logfile
+  if utils.is_file(file) then
+    return file
+  end
+end
+
+---Toggles a log viewer according to log.viewer.layout_config
+---@param name can be the name of any of the managed logs, e,g. "lunarvim" or the default ones {"nvim", "lsp", "packer.nvim"}
+M.toggle_log_view = function(name)
+  local logfile = get_log_path(name)
+  if not logfile then
+    return
+  end
   local term_opts = vim.tbl_deep_extend("force", lvim.builtin.terminal, {
-    cmd = log_viewer,
+    cmd = lvim.log.viewer.cmd .. " " .. logfile,
     open_mapping = lvim.log.viewer.layout_config.open_mapping,
     direction = lvim.log.viewer.layout_config.direction,
     -- TODO: this might not be working as expected
@@ -108,6 +123,7 @@ M.toggle_log_view = function(logfile)
 
   local Terminal = require("toggleterm.terminal").Terminal
   local log_view = Terminal:new(term_opts)
+  -- require("core.log"):debug("term", vim.inspect(term_opts))
   log_view:toggle()
 end
 

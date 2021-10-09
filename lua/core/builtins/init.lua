@@ -15,6 +15,7 @@ local builtins = {
   "core.bufferline",
   "core.autopairs",
   "core.comment",
+  "core.lspinstall",
   "core.lualine",
 }
 
